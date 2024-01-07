@@ -1,0 +1,38 @@
+on:
+  push:
+  workflow_dispatch:
+jobs:
+  scs:
+    runs-on: windows-latest
+    permissions:
+      contents: read
+      packages: write
+      security-events: write
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: |
+            3.1.x
+            7.0.x
+      - uses: nuget/setup-nuget@v1.0.5
+      - uses: microsoft/setup-msbuild@v1.0.2
+      - name: Format
+        run: dotnet format --verbosity diagnostic
+      - name: Set up SCS
+        uses: security-code-scan/security-code-scan-add-action@main
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v2
+        with:
+          languages: 'csharp'
+      - name: Build
+        run: |
+          nuget restore
+          msbuild
+      - name: Convert sarif for uploading to GitHub
+        uses: security-code-scan/security-code-scan-results-action@v1
+      - name: Upload sarif
+        uses: github/codeql-action/upload-sarif@v2
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v2
